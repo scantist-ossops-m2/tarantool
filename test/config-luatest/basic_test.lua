@@ -75,3 +75,53 @@ g.test_example_replicaset = function(g)
     local config_file = fio.abspath('doc/examples/config/replicaset.yaml')
     helpers.start_example_replicaset(g, dir, config_file)
 end
+
+g.test_example_credentials = function(g)
+    local dir = treegen.prepare_directory(g, {}, {})
+    local config_file = fio.abspath('doc/examples/config/credentials.yaml')
+    helpers.start_example_replicaset(g, dir, config_file)
+
+    -- Verify roles.
+    local info = g.server_1:eval("return box.schema.role.info('api_access')")
+    t.assert_equals(info, {})
+    local info = g.server_1:eval("return box.schema.role.info('audit')")
+    t.assert_equals(info, {
+        {'read,write,execute,create,drop,alter', 'universe', ''},
+    })
+    local info = g.server_1:eval("return box.schema.role.info('cdc')")
+    t.assert_equals(info, {
+        {'execute', 'role', 'replication'},
+    })
+
+    local all_permissions = 'read,write,execute,session,usage,create,drop,' ..
+        'alter,reference,trigger,insert,update,delete'
+
+    -- Verify users.
+    local info = g.server_1:eval("return box.schema.user.info('replicator')")
+    t.assert_equals(info, {
+        {'execute', 'role', 'public'},
+        {'execute', 'role', 'replication'},
+        {'session,usage', 'universe', ''},
+        {'alter', 'user', 'replicator'},
+    })
+    local info = g.server_1:eval("return box.schema.user.info('client')")
+    t.assert_equals(info, {
+        {'execute', 'role', 'public'},
+        {'execute', 'role', 'super'},
+        {'execute', 'role', 'api_access'},
+        {'session,usage', 'universe', ''},
+        {'alter', 'user', 'client'},
+    })
+    local info = g.server_1:eval("return box.schema.user.info('admin')")
+    t.assert_equals(info, {
+        {all_permissions, 'universe', ''}
+    })
+    local info = g.server_1:eval("return box.schema.user.info('monitor')")
+    t.assert_equals(info, {
+        {'execute', 'role', 'public'},
+        {'session,usage', 'universe', ''},
+        {'alter', 'user', 'monitor'},
+    })
+
+    -- TODO: Verify passwords.
+end
