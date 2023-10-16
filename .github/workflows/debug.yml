@@ -50,7 +50,7 @@ jobs:
           submodules: recursive
 
       - name: Set environment
-        uses: ./.github/actions/environment
+        uses: ./.github/actions/setup-env
 
       - name: Install deps
         uses: ./.github/actions/install-deps-debian
